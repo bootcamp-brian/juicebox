@@ -5,7 +5,8 @@ const { client,
     createPost,
     updatePost,
     getAllPosts,
-    getUserById
+    getUserById,
+    getPostsByTagName
 } = require('./index');
 
 const testDB = async () => {
@@ -39,6 +40,16 @@ const testDB = async () => {
         const albert = await getUserById(1);
         console.log("Result:", albert);
 
+        console.log("Calling updatePost on posts[1], only updating tags");
+        const updatePostTagsResult = await updatePost(posts[1].id, {
+          tags: ["#youcandoanything", "#redfish", "#bluefish"]
+        });
+        console.log("Result:", updatePostTagsResult);
+
+        console.log("Calling getPostsByTagName with #happy");
+        const postsWithHappy = await getPostsByTagName("#happy");
+        console.log("Result:", postsWithHappy);
+
         console.log("Finished database tests!");
     } catch (error) {
         console.error("Error testing database!")
@@ -51,6 +62,8 @@ const dropTables = async () => {
         console.log("Starting to drop tables...");
 
         await client.query(`
+            DROP TABLE IF EXISTS post_tags;
+            DROP TABLE IF EXISTS tags;
             DROP TABLE IF EXISTS posts;
             DROP TABLE IF EXISTS users;
         `);
@@ -81,6 +94,15 @@ const createTables = async () => {
                 title VARCHAR(255) NOT NULL,
                 content TEXT NOT NULL,
                 active BOOLEAN DEFAULT true
+            );
+            CREATE TABLE tags (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) UNIQUE NOT NULL
+            );
+            CREATE TABLE post_tags (
+                "postId" INTEGER REFERENCES posts(id),
+                "tagId" INTEGER REFERENCES tags(id),
+                UNIQUE ("postId", "tagId")
             );
         `);
 
@@ -117,19 +139,22 @@ const createInitialPosts = async () => {
         await createPost({
             authorId: albert.id,
             title: "First Post",
-            content: "This is my first post. I hope I love writing blogs as much as I love writing them."
+            content: "This is my first post. I hope I love writing blogs as much as I love writing them.",
+            tags: ["#happy", "#youcandoanything"]
         });
 
         await createPost({
             authorId: sandra.id,
-            title: "First Post",
-            content: "This is my first post. I hope I love writing blogs as much as I love writing them."
+            title: "Random",
+            content: "This is just some random text.",
+            tags: ["#random", "#bluefish"]
         });
 
         await createPost({
             authorId: glamgal.id,
-            title: "First Post",
-            content: "This is my first post. I hope I love writing blogs as much as I love writing them."
+            title: "Three",
+            content: "Third times the charm.",
+            tags: ["#three", "#charmed", "#whatever"]
         });
 
         console.log("Finished creating posts!");
@@ -146,6 +171,7 @@ const rebuildDB = async () => {
         await createTables();
         await createInitialUsers();
         await createInitialPosts();
+        // await createInitialTags();
     } catch (error) {
         console.error(error);
     }
