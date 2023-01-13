@@ -79,7 +79,7 @@ const createPost = async ({
     }
 }
 
-// updates a post from with a specific id on our posts table
+// updates a post with a specific id on our posts table using the info provided in the fields object parameter
 const updatePost = async (postId, fields = {}) => {
     const { tags } = fields;
     delete fields.tags;
