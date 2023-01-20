@@ -4,8 +4,8 @@ const client = new Client('postgres://localhost:5432/juicebox-dev');
 
 // gets the info for all of our users from the users table
 const getAllUsers = async () => {
-    const { rows } = await client.query(
-        `SELECT id, username, name, location, active
+    const { rows } = await client.query(`
+        SELECT id, username, name, location, active
         FROM users;
     `);
     
@@ -54,6 +54,42 @@ const updateUser = async (id, fields = {}) => {
         return user;
     } catch (error) {
         throw error;
+    }
+}
+
+// gets the user info minus the password of a specific user from the users table
+const getUserById = async (userId) => {
+    try {
+        const { rows: [ user ] } = await client.query(`
+            SELECT * FROM users
+            WHERE id=${ userId };
+        `)
+        if (!user) {
+            return null;
+        }
+
+        delete user.password;
+
+        const posts = await getPostsByUser(user.id);
+        user.posts = posts;
+
+        return user;
+    } catch (error) {
+        throw error;
+    }
+}
+
+const getUserByUsername = async (username) => {
+    try {
+      const { rows: [user] } = await client.query(`
+        SELECT *
+        FROM users
+        WHERE username=$1;
+      `, [username]);
+  
+      return user;
+    } catch (error) {
+      throw error;
     }
 }
 
@@ -130,6 +166,13 @@ const getPostById = async (postId) => {
         FROM posts
         WHERE id=$1;
       `, [postId]);
+
+      if (!post) {
+        throw {
+          name: "PostNotFoundError",
+          message: "Could not find a post with that postId"
+        };
+      }
   
       const { rows: tags } = await client.query(`
         SELECT tags.*
@@ -158,8 +201,8 @@ const getPostById = async (postId) => {
 // gets each of the posts from the posts table utilizing the getPostById() function 
 const getAllPosts = async () => {
     try {
-        const { rows: postIds } = await client.query(
-            `SELECT id
+        const { rows: postIds } = await client.query(`
+            SELECT id
             FROM posts;
         `);
         
@@ -187,28 +230,6 @@ const getPostsByUser = async (userId) => {
         ))
 
         return posts;
-    } catch (error) {
-        throw error;
-    }
-}
-
-// gets the user info minus the password of a specific user from the users table
-const getUserById = async (userId) => {
-    try {
-        const { rows: [ user ] } = await client.query(`
-            SELECT * FROM users
-            WHERE id=${ userId };
-        `)
-        if (!user) {
-            return null;
-        }
-
-        delete user.password;
-
-        const posts = await getPostsByUser(user.id);
-        user.posts = posts;
-
-        return user;
     } catch (error) {
         throw error;
     }
@@ -292,6 +313,18 @@ const getPostsByTagName = async (tagName) => {
     }
 } 
 
+const getAllTags = async () => {
+    try {
+        const { rows } = await client.query(`
+            SELECT * FROM tags;
+        `);
+        
+        return rows;
+    } catch (error) {
+        throw error;
+    }
+}
+
 module.exports = {
     client,
     getAllUsers,
@@ -303,5 +336,8 @@ module.exports = {
     getUserById,
     createTags,
     addTagsToPost,
-    getPostsByTagName
+    getPostsByTagName,
+    getAllTags,
+    getUserByUsername,
+    getPostById
 }
